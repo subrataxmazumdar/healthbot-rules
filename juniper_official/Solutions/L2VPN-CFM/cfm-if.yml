@@ -1,0 +1,24 @@
+---
+CfmInterfaceTable:
+  rpc: get-cfm-interfaces-information
+  args:
+    summary: True
+  item: cfm-interface-summary/cfm-interface-session-summary
+  key:
+    - cfm-mep-identifier
+    - cfm-remote-mep-identifier
+    # - ../cfm-interface-name[1]
+    - ./preceding-sibling::cfm-interface-name[1]
+  view: CfmInterfaceTableView
+
+CfmInterfaceTableView:
+  fields:
+    cfm-interface-name:        ./preceding-sibling::cfm-interface-name[1]
+    cfm-remote-mep-state:      cfm-remote-mep-state
+    cfm-interface-status:      cfm-interface-status
+    cfm-interface-link-status: cfm-interface-link-status
+    cfm-level:                 cfm-level
+    cfm-local-mep-identifier:  cfm-mep-identifier
+    cfm-remote-mep-identifier: cfm-remote-mep-identifier
+
+

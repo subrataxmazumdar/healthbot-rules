@@ -1,0 +1,37 @@
+---
+CfmDmTable:
+  rpc: get-cfm-iterator-history
+  item: cfm-iter-mep-summary
+  args:
+    sla-iterator: DM1
+    delay-measurement: True
+  key:
+    - cfm-maintenance-domain-name
+    - cfm-maintenance-association-name
+    - cfm-local-mep-identifier
+    - cfm-remote-mep-identifier
+    - ./following-sibling::cfm-iter-summary[1]/cfm-iterator-name
+  view: CfmDmTableView
+
+CfmDmTableView:
+  fields:
+    cfm-remote-mep-mac-address:      ./cfm-remote-mep-mac-address
+    cfm-iterator-name:               ./following-sibling::cfm-iter-summary[1]/cfm-iterator-name
+
+    cfm-pm-history-record-number:    (./following-sibling::cfm-iter-mep-summary[1]/preceding-sibling::cfm-pm-dm-history-record-entry[1]/cfm-iter-pm-history-dm-entry[1]/cfm-pm-history-record-number |  ./following-sibling::cfm-pm-dm-history-record-entry[last()]/cfm-iter-pm-history-dm-entry[1]/cfm-pm-history-record-number)[1]
+    cfm-pm-mi-start-time:            (./following-sibling::cfm-iter-mep-summary[1]/preceding-sibling::cfm-pm-dm-history-record-entry[1]/cfm-iter-pm-history-dm-entry[1]/cfm-pm-mi-start-time | ./following-sibling::cfm-pm-dm-history-record-entry[last()]/cfm-iter-pm-history-dm-entry[1]/cfm-pm-mi-start-time)[1]
+    cfm-pm-mi-end-time:              (./following-sibling::cfm-iter-mep-summary[1]/preceding-sibling::cfm-pm-dm-history-record-entry[1]/cfm-iter-pm-history-dm-entry[1]/cfm-pm-mi-end-time | ./following-sibling::cfm-pm-dm-history-record-entry[last()]/cfm-iter-pm-history-dm-entry[1]/cfm-pm-mi-end-time)[1]
+
+    cfm-pm-twoway-frame-delay-max:   (./following-sibling::cfm-iter-mep-summary[1]/preceding-sibling::cfm-pm-dm-history-record-entry[1]/cfm-iter-pm-history-dm-entry[1]/cfm-pm-twoway-frame-delay-max | ./following-sibling::cfm-pm-dm-history-record-entry[last()]/cfm-iter-pm-history-dm-entry[1]/cfm-pm-twoway-frame-delay-max)[1]
+    cfm-pm-twoway-frame-delay-min:   (./following-sibling::cfm-iter-mep-summary[1]/preceding-sibling::cfm-pm-dm-history-record-entry[1]/cfm-iter-pm-history-dm-entry[1]/cfm-pm-twoway-frame-delay-min | ./following-sibling::cfm-pm-dm-history-record-entry[last()]/cfm-iter-pm-history-dm-entry[1]/cfm-pm-twoway-frame-delay-min)[1]
+    cfm-pm-twoway-frame-delay-avg:   (./following-sibling::cfm-iter-mep-summary[1]/preceding-sibling::cfm-pm-dm-history-record-entry[1]/cfm-iter-pm-history-dm-entry[1]/cfm-pm-twoway-frame-delay-avg | ./following-sibling::cfm-pm-dm-history-record-entry[last()]/cfm-iter-pm-history-dm-entry[1]/cfm-pm-twoway-frame-delay-avg)[1]
+
+    cfm-pm-forward-frame-delay-max:  (./following-sibling::cfm-iter-mep-summary[1]/preceding-sibling::cfm-pm-dm-history-record-entry[1]/cfm-iter-pm-history-dm-entry[1]/ cfm-pm-forward-frame-delay-max | ./following-sibling::cfm-pm-dm-history-record-entry[last()]/cfm-iter-pm-history-dm-entry[1]/cfm-pm-forward-frame-delay-max)[1]
+    cfm-pm-forward-frame-delay-min:  (./following-sibling::cfm-iter-mep-summary[1]/preceding-sibling::cfm-pm-dm-history-record-entry[1]/cfm-iter-pm-history-dm-entry[1]/cfm-pm-forward-frame-delay-min | ./following-sibling::cfm-pm-dm-history-record-entry[last()-1]/cfm-iter-pm-history-dm-entry[1]/cfm-pm-forward-frame-delay-min)[1]
+    cfm-pm-forward-frame-delay-avg:  (./following-sibling::cfm-iter-mep-summary[1]/preceding-sibling::cfm-pm-dm-history-record-entry[1]/cfm-iter-pm-history-dm-entry[1]/cfm-pm-forward-frame-delay-avg | ./following-sibling::cfm-pm-dm-history-record-entry[last()-1]/cfm-iter-pm-history-dm-entry[1]/cfm-pm-forward-frame-delay-avg)[1]
+
+    cfm-pm-backward-frame-delay-max: (./following-sibling::cfm-iter-mep-summary[1]/preceding-sibling::cfm-pm-dm-history-record-entry[1]/cfm-iter-pm-history-dm-entry[1]/cfm-pm-backward-frame-delay-max | ./following-sibling::cfm-pm-dm-history-record-entry[last()-1]/cfm-iter-pm-history-dm-entry[1]/cfm-pm-backward-frame-delay-max)[1]
+    cfm-pm-backward-frame-delay-min: (./following-sibling::cfm-iter-mep-summary[1]/preceding-sibling::cfm-pm-dm-history-record-entry[1]/cfm-iter-pm-history-dm-entry[1]/cfm-pm-backward-frame-delay-min | ./following-sibling::cfm-pm-dm-history-record-entry[last()-1]/cfm-iter-pm-history-dm-entry[1]/cfm-pm-backward-frame-delay-min)[1]
+    cfm-pm-backward-frame-delay-avg: (./following-sibling::cfm-iter-mep-summary[1]/preceding-sibling::cfm-pm-dm-history-record-entry[1]/cfm-iter-pm-history-dm-entry[1]/cfm-pm-backward-frame-delay-avg | ./following-sibling::cfm-pm-dm-history-record-entry[last()-1]/cfm-iter-pm-history-dm-entry[1]/cfm-pm-backward-frame-delay-avg)[1]
+
+

@@ -1,0 +1,25 @@
+/*
+ * All-in-one Playbook to monitor 
+ *   - CFM interface, link and remote MEP status,
+ *   - CFM average, min and max for forward, backward and twoway delays and
+ *   - CFM forward and backward loss measurment(SLM)
+ * and notifies anomalies.
+ * 
+ * 1) Rule cfm-interface-status-netconf, Monitors CFM interface status and notify anomalies related to link status and remote mep state and notifies anomalies 
+ *    if link status and remote MEP state are not normal.
+ *
+ * 2) Rule check-cfm-dm-statistics-netconf, Monitors CFM average, min and max delay for forward, backward and twoway for configured destination and notifies anomalies
+ *    when average, min and max for forward, backward and twoway delays are above correspnding static thresholds.
+ * 
+ * 3) Rule check-cfm-slm-statistics-netconf, monitor CFM forward and backward frame loss to configured destination and notifies anomalies
+ *    when forward and backward frame loss is above static thresholds.
+ * 
+ */
+healthbot {
+    playbook cfm-all-statistics-playbook {
+        rules [ protocol.cfm-dm/check-cfm-dm-statistics-netconf protocol.cfm-slm/check-cfm-slm-statistics-netconf protocol.cfm-if/cfm-interface-status-netconf ];
+
+        description "Device playbook to monitor CFM interface status, delay and synthetic loss for COX POC";
+	synopsis "Customized CFM interface status, delay and loss statistics checker for COX POC";
+    }
+}

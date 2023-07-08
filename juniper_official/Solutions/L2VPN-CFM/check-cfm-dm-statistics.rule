@@ -1,0 +1,782 @@
+/*
+ * Monitors CFM average, min and max for forward, backward and twoway delays for configured destination and notifies anomalies
+ * when average, min and max delay is above static thresholds for corresponding delay exceeds static thresholds.
+ * Following inputs control detection:
+ *
+ *   1) maximum-twoway-delay-avg-threshold, is the threshold that causes the rule to report an
+ *      anomaly. By default it is 100000 micro seconds. This rule will set a
+ *      dashboard color to red when CFM average twoway delay time is greater than static
+ *      threshold 'maximum-twoway-delay-avg-threshold-value'.
+ *   2) maximum-twoway-delay-max-threshold, is the threshold that causes the rule to report an
+ *      anomaly. By default it is 1000000 micro seconds. This rule will set a
+ *      dashboard color to red when CFM max twoway delay time is greater than static
+ *      threshold 'maximum-twoway-delay-max-threshold-value'.
+ *   3) maximum-twoway-delay-min-threshold, is the threshold that causes the rule to report an
+ *      anomaly. By default it is 1000000 micro seconds. This rule will set a
+ *      dashboard color to red when CFM min twoway delay time is greater than static
+ *      threshold 'maximum-twoway-delay-min-threshold-value'.
+ *   4) maximum-forward-delay-avg-threshold, is the threshold that causes the rule to report an
+ *      anomaly. By default it is 1000000 micro seconds. This rule will set a
+ *      dashboard color to red when CFM average forward delay time is greater than static
+ *      threshold 'maximum-forward-delay-avg-threshold'.
+ *   4) maximum-backward-delay-avg-threshold, is the threshold that causes the rule to report an
+ *      anomaly. By default it is 1000000 micro seconds. This rule will set a
+ *      dashboard color to red when CFM average forward delay time is greater than static
+ *      threshold 'maximum-backward-delay-avg-threshold'.
+ *
+ * Minimum sample configuration required in Junos MX configuration
+ * set interfaces ge-0/3/9 description "Connect to lab-asr9k10-02 gi0/0/1/19"
+ * set interfaces ge-0/3/9 unit 0 family inet address 10.3.19.1/30
+ * set protocols oam ethernet connectivity-fault-management performance-monitoring enhanced-sla-iterator
+ * set protocols oam ethernet connectivity-fault-management performance-monitoring measurement-interval 5
+ * set protocols oam ethernet connectivity-fault-management performance-monitoring sla-iterator-profiles PCORE measurement-type two-way-delay
+ * set protocols oam ethernet connectivity-fault-management performance-monitoring sla-iterator-profiles PCORE measurement-interval 5
+ * set protocols oam ethernet connectivity-fault-management maintenance-domain PCORE level 0
+ * set protocols oam ethernet connectivity-fault-management maintenance-domain PCORE maintenance-association PCORE continuity-check interval 100ms
+ * set protocols oam ethernet connectivity-fault-management maintenance-domain PCORE maintenance-association PCORE mep 100 interface ge-0/3/9
+ * set protocols oam ethernet connectivity-fault-management maintenance-domain PCORE maintenance-association PCORE mep 100 remote-mep 101 sla-iterator-profile PCORE
+ */
+healthbot {
+    topic protocol.cfm-dm {
+        description "Monitors CFM average, max delay and notify anomalies";
+        synopsis "CFM delay analyzer";
+        rule check-cfm-dm-statistics-netconf {
+            description "Monitors CFM average and max delay to configured destination";
+            synopsis "cfm delay statistics KPI";		
+            /*
+             * Monitors CFM average and max delay to configured destination.
+             * Notifies via the dashboard colors when average and max delay
+             *is above threshold  to red. Otherwise the color is set to green.
+             *
+             * Use association-name domain-name iterator-name as key for rule.
+             */
+            keys [ association-name domain-name local-mep-identifier  remote-mep-identifier  iterator-name ];
+            /*
+             * Sensor configuration to get data from network devices.
+             */
+            sensor cfm_iAgent {
+                iAgent {
+                    file cfm-dm.yml;
+                    table CfmDmTable;
+                    frequency 60s;
+                }
+            }
+            field domain-name {
+                sensor cfm_iAgent {
+		    where "cfm-maintenance-domain-name =~ /{{cfm-md-name}}/";
+                    where "cfm-pm-history-record-number != none";
+                    where "cfm-remote-mep-mac-address != none";
+                    path cfm-maintenance-domain-name;
+                }
+                type string;
+                description "CFM maintenance domain name";
+            }
+            field association-name {
+                sensor cfm_iAgent {
+		    where "cfm-maintenance-association-name =~ /{{cfm-ma-name}}/";
+                    where "cfm-pm-history-record-number != none";
+                    where "cfm-remote-mep-mac-address != none";
+                    path cfm-maintenance-association-name;
+                }
+                type string;
+                description "CFM maintenance association name";
+            }
+            field local-mep-identifier {
+                sensor cfm_iAgent {
+		    where "cfm-local-mep-identifier =~ /{{cfm-local-mep}}/";
+                    where "cfm-pm-history-record-number != none";
+                    where "cfm-remote-mep-mac-address != none";
+                    path cfm-local-mep-identifier;
+                }
+		/*
+                type integer;
+		*/
+                type string;
+                description "CFM local mep identifier";
+            }
+            field remote-mep-identifier {
+                sensor cfm_iAgent {
+                    where "cfm-pm-history-record-number != none";
+                    where "cfm-remote-mep-mac-address != none";
+		    where "cfm-remote-mep-identifier =~ /{{cfm-remote-mep}}/";
+                    path cfm-remote-mep-identifier;
+                }
+		/*
+                type integer;
+		*/
+                type string;
+                description "CFM remote mep identifier";
+            }
+            field iterator-name {
+                sensor cfm_iAgent {
+		    where "cfm-iterator-name =~ /{{cfm-iterator-name}}/";
+		    path cfm-iterator-name;
+                }
+                type string;
+                description "CFM iteratorname";
+            }
+            field mep-mac-address {
+                sensor cfm_iAgent {
+                    path cfm-remote-mep-mac-address;
+                    data-if-missing {
+                        value 00:00:00:00:00:00;
+                    }
+                }
+                type string;
+                description "CFM remote mep mac address";
+            }
+
+            field history-record-number {
+                sensor cfm_iAgent {
+                    path cfm-pm-history-record-number;
+                }
+                type integer;
+                description "CFM history record number";
+            }
+            field mi-start-time {
+                sensor cfm_iAgent {
+                    path cfm-pm-mi-start-time;
+                }
+                type string;
+                description "CFM history record start-time";
+            }
+            field mi-end-time {
+                sensor cfm_iAgent {
+                    path cfm-pm-mi-end-time;
+                }
+                type string;
+                description "CFM history record end-time";
+            }
+
+            field twoway-delay-avg {
+                sensor cfm_iAgent {
+                    path cfm-pm-twoway-frame-delay-avg;
+                }
+                type integer;
+                description "CFM pm twoway frame delay avg";
+            }
+            field twoway-delay-max {
+                sensor cfm_iAgent {
+                    path cfm-pm-twoway-frame-delay-max;
+                }
+                type integer;
+                description "CFM pm twoway frame delay max";
+            }
+            field twoway-delay-min {
+                sensor cfm_iAgent {
+                    path cfm-pm-twoway-frame-delay-min;
+                }
+                type integer;
+                description "CFM pm twoway frame delay min";
+            }
+            field dt-twoway-delay-avg {
+                formula {
+                    anomaly-detection {
+                        algorithm k-means;
+                        learning-period 7d;
+                        pattern-periodicity 1h;
+                        field-name "$twoway-delay-avg";
+                    }
+                }
+                type integer;
+                description "Dynamic Threshold (k-means)  for twoway delay average";
+            }
+            field pt-twoway-delay-avg {
+                formula {
+                    predict {
+                        algorithm holt-winters;
+                        learning-period 7d;
+                        seasonality 1d;
+                        field-name "$twoway-delay-avg";
+                        prediction-offset 1h;
+                    }
+                }
+                type integer;
+                description "ML-predicted Dynamic Threshold (holt-winters)  for twoway delay average";
+            }
+
+            field forward-delay-avg {
+                sensor cfm_iAgent {
+                    path cfm-pm-forward-frame-delay-avg;
+                }
+                type integer;
+                description "CFM pm forward frame delay avg";
+            }
+            field forward-delay-max {
+                sensor cfm_iAgent {
+                    path cfm-pm-forward-frame-delay-max;
+                }
+                type integer;
+                description "CFM pm forward frame delay max";
+            }
+            field forward-delay-min {
+                sensor cfm_iAgent {
+                    path cfm-pm-forward-frame-delay-min;
+                }
+                type integer;
+                description "CFM pm forward frame delay min";
+            }
+            field dt-forward-delay-avg {
+                formula {
+                    anomaly-detection {
+                        algorithm k-means;
+                        learning-period 7d;
+                        pattern-periodicity 1h;
+                        field-name "$forward-delay-avg";
+                    }
+                }
+                type integer;
+                description "Dynamic Threshold (k-means)  for forward delay average";
+            }
+            field pt-forward-delay-avg {
+                formula {
+                    predict {
+                        algorithm holt-winters;
+                        learning-period 7d;
+                        seasonality 1d;
+                        field-name "$forward-delay-avg";
+                        prediction-offset 1h;
+                    }
+                }
+                type integer;
+                description "ML-predicted Dynamic Threshold (holt-winters)  for forward delay average";
+            }
+
+            field backward-delay-avg {
+                sensor cfm_iAgent {
+                    path cfm-pm-backward-frame-delay-avg;
+                }
+                type integer;
+                description "CFM pm backward frame delay avg";
+            }
+            field backward-delay-max {
+                sensor cfm_iAgent {
+                    path cfm-pm-backward-frame-delay-max;
+                }
+                type integer;
+                description "CFM pm backward frame delay max";
+            }
+            field backward-delay-min {
+                sensor cfm_iAgent {
+                    path cfm-pm-backward-frame-delay-min;
+                }
+                type integer;
+                description "CFM pm backward frame delay min";
+            }
+            field dt-backward-delay-avg {
+                formula {
+                    anomaly-detection {
+                        algorithm k-means;
+                        learning-period 7d;
+                        pattern-periodicity 1h;
+                        field-name "$backward-delay-avg";
+                    }
+                }
+                type integer;
+                description "Dynamic Threshold (k-means)  for backward delay average";
+            }
+            field pt-backward-delay-avg {
+                formula {
+                    predict {
+                        algorithm holt-winters;
+                        learning-period 7d;
+                        seasonality 1d;
+                        field-name "$backward-delay-avg";
+                        prediction-offset 1h;
+                    }
+                }
+                type integer;
+                description "ML-predicted Dynamic Threshold (holt-winters)  for backward delay average";
+            }
+
+            field mac-value-when-missing {
+                constant {
+                    value "00:00:00:00:00:00";
+                }
+                type string;
+                description "CFM Default mac value when missing.";
+            }
+
+            field maximum-twoway-delay-avg-threshold-value {
+                constant {
+                    value "{{maximum-twoway-delay-avg-threshold}}";
+                }
+                type integer;
+                description "CFM maximum twoway-delay average threshold value";
+            }
+            field maximum-twoway-delay-max-threshold-value {
+                constant {
+                    value "{{maximum-twoway-delay-max-threshold}}";
+                }
+                type integer;
+                description "CFM minimum twoway-delay max threshold value";
+            }
+            field maximum-twoway-delay-min-threshold-value {
+                constant {
+                    value "{{maximum-twoway-delay-min-threshold}}";
+                }
+                type integer;
+                description "CFM minimum twoway-delay min threshold value";
+            }
+
+            field maximum-forward-delay-avg-threshold-value {
+                constant {
+                    value "{{maximum-forward-delay-avg-threshold}}";
+                }
+                type integer;
+                description "CFM maximum forward delay average threshold value";
+            }
+            field maximum-backward-delay-avg-threshold-value {
+                constant {
+                    value "{{maximum-backward-delay-avg-threshold}}";
+                }
+                type integer;
+                description "CFM maximum backward delay average threshold value";
+            }
+
+            trigger check-cfm-twoway-avg-delay {
+                synopsis "CFM average delay KPI";
+                description "Sets health based on CFM average delay";
+                frequency 1offset;
+                /*
+                 * Sets color to red and sends out an anomaly notification when
+                 * average delay is more than the threshold limit
+                 */
+                term is-twoway-avg-delay-more-than-threshold {
+                    when {
+                        greater-than "$twoway-delay-avg" "$maximum-twoway-delay-avg-threshold-value";
+                    }
+                    then {
+                        status {
+                            color red;
+                            message "ERROR: CFM average twoway-delay $twoway-delay-avg is more than the threshold($maximum-twoway-delay-avg-threshold-value) for association-name: $association-name, domain-name: $domain-name, local-mep-identifier: $local-mep-identifier, remote-mep-identifier: $remote-mep-identifier, iterator-name: $iterator-name, mep-mac-address: $mep-mac-address history-record-number: $history-record-number mi-end-time: $mi-end-time ";
+                        }
+                    }
+                }
+                term is-twoway-avg-delay-zero {
+                    when {
+                        equal-to "$twoway-delay-avg" 0;
+                    }
+                    then {
+                        status {
+                            color yellow;
+                            message "WARNING: CFM average twoway-delay $twoway-delay-avg is zero for association-name: $association-name, domain-name: $domain-name, local-mep-identifier: $local-mep-identifier, remote-mep-identifier: $remote-mep-identifier, iterator-name: $iterator-name, mep-mac-address: $mep-mac-address history-record-number: $history-record-number mi-end-time: $mi-end-time ";
+                        }
+                    }
+                }
+
+                term is-twoway-avg-delay-more-than-dt-threshhold {
+                    when {
+                        equal-to "$dt-twoway-delay-avg" 1;
+                    }
+                    then {
+                        status {
+                            color yellow;
+                            message "Anomaly detected - twoway avg delay baseline is breached";
+                        }
+                    }
+                }
+                term is-twoway-avg-delay-more-than-pt-threshold {
+                    when {
+                        greater-than-or-equal-to "$pt-twoway-delay-avg" "$maximum-twoway-delay-avg-threshold-value";
+                    }
+                    then {
+                        status {
+                            color yellow;
+                            message "CFM predicted average twoway-delay $pt-twoway-delay-avg is more than the threshold ($maximum-twoway-delay-avg-threshold-value) for association-name: $association-name, domain-name: $domain-name, local-mep-identifier: $local-mep-identifier, remote-mep-identifier: $remote-mep-identifier, iterator-name: $iterator-name, mep-mac-address: $mep-mac-address history-record-number: $history-record-number mi-end-time: $mi-end-time ";
+                        }
+			/*
+                        next;
+			*/
+                    }
+                }
+                /*
+                 * Defaults color to green.
+                 */
+                term is-twoway-avg-delay-less-than-threshold {
+                    then {
+                        status {
+                            color green;
+                            message "CFM average twoway-delay $twoway-delay-avg is with in the threshold($maximum-twoway-delay-avg-threshold-value)  for association-name: $association-name, domain-name: $domain-name, local-mep-identifier: $local-mep-identifier, remote-mep-identifier: $remote-mep-identifier, iterator-name: $iterator-name, mep-mac-address: $mep-mac-address history-record-number: $history-record-number mi-end-time: $mi-end-time ";
+                        }
+                    }
+                }
+            }
+
+            trigger check-cfm-twoway-max-delay {
+                synopsis "CFM max delay KPI";
+                description "Sets health based on CFM max delay";
+                frequency 1offset;
+                /*
+                 * Sets color to red and sends out an anomaly notification when
+                 * max delay is more than the threshold limit
+                 */
+                term is-twoway-max-delay-more-than-threshold {
+                    when {
+                        greater-than "$twoway-delay-max" "$maximum-twoway-delay-max-threshold-value";
+                    }
+                    then {
+                        status {
+                            color red;
+                            message "ERROR: CFM maximum twoway-delay $twoway-delay-max is more than the threshold($maximum-twoway-delay-max-threshold-value) for association-name: $association-name, domain-name: $domain-name, local-mep-identifier: $local-mep-identifier, remote-mep-identifier: $remote-mep-identifier, iterator-name: $iterator-name history-record-number: $history-record-number mi-end-time: $mi-end-time ";
+                        }
+                    }
+                }
+                term is-twoway-max-delay-zero {
+                    when {
+                        equal-to "$twoway-delay-max" 0;
+                    }
+                    then {
+                        status {
+                            color yellow;
+                            message "WARNING: CFM maximum twoway-delay $twoway-delay-max is zero for association-name: $association-name, domain-name: $domain-name, local-mep-identifier: $local-mep-identifier, remote-mep-identifier: $remote-mep-identifier, iterator-name: $iterator-name history-record-number: $history-record-number mi-end-time: $mi-end-time ";
+                        }
+                    }
+                }
+
+                /*
+                 * Defaults color to green.
+                 */
+                term is-twoway-max-delay-less-than-threshold {
+                    then {
+                        status {
+                            color green;
+                            message "CFM maximum twoway-delay $twoway-delay-max is within the threshold($maximum-twoway-delay-max-threshold-value) for association-name: $association-name, domain-name: $domain-name, local-mep-identifier: $local-mep-identifier, remote-mep-identifier: $remote-mep-identifier, iterator-name: $iterator-name history-record-number: $history-record-number mi-end-time: $mi-end-time ";
+                        }
+                    }
+                }
+            }
+
+            trigger check-cfm-twoway-min-delay {
+                synopsis "CFM min delay KPI";
+                description "Sets health based on CFM min delay";
+                frequency 1offset;
+                /*
+                 * Sets color to red and sends out an anomaly notification when
+                 * min delay is more than the threshold limit
+                 */
+                term is-twoway-min-delay-more-than-threshold {
+                    when {
+                        greater-than "$twoway-delay-min" "$maximum-twoway-delay-min-threshold-value";
+                    }
+                    then {
+                        status {
+                            color red;
+                            message "ERROR: CFM minimum twoway-delay $twoway-delay-min is more than the threshold($maximum-twoway-delay-min-threshold-value) for association-name: $association-name, domain-name: $domain-name, local-mep-identifier: $local-mep-identifier, remote-mep-identifier: $remote-mep-identifier, iterator-name: $iterator-name history-record-number: $history-record-number mi-end-time: $mi-end-time ";
+                        }
+                    }
+                }
+                term is-twoway-min-delay-zero {
+                    when {
+                        equal-to "$twoway-delay-min" 0;
+                    }
+                    then {
+                        status {
+                            color yellow;
+                            message "WARNING: CFM minimum twoway-delay $twoway-delay-min is zero for association-name: $association-name, domain-name: $domain-name, local-mep-identifier: $local-mep-identifier, remote-mep-identifier: $remote-mep-identifier, iterator-name: $iterator-name history-record-number: $history-record-number mi-end-time: $mi-end-time ";
+                        }
+                    }
+                }
+                /*
+                 * Defaults color to green.
+                 */
+                term is-twoway-min-delay-less-than-threshold {
+                    then {
+                        status {
+                            color green;
+                            message "CFM minimum twoway-delay $twoway-delay-min is within the threshold($maximum-twoway-delay-min-threshold-value) for association-name: $association-name, domain-name: $domain-name, local-mep-identifier: $local-mep-identifier, remote-mep-identifier: $remote-mep-identifier, iterator-name: $iterator-name history-record-number: $history-record-number mi-end-time: $mi-end-time ";
+                        }
+                    }
+                }
+            }
+
+            trigger check-cfm-forwrad-avg-delay {
+                synopsis "CFM average forward-delay KPI";
+                description "Sets health based on CFM average forward-delay";
+                frequency 1offset;
+                /*
+                 * Sets color to red and sends out an anomaly notification when
+                 * average forward-delay is more than the threshold limit
+                 */
+                term is-avg-forward-delay-more-than-threshold {
+                    when {
+                        greater-than "$forward-delay-avg" "$maximum-forward-delay-avg-threshold-value";
+                    }
+                    then {
+                        status {
+                            color red;
+                            message "ERROR: CFM average forward-delay $forward-delay-avg is more than the threshold($maximum-forward-delay-avg-threshold-value) for association-name: $association-name, domain-name: $domain-name, local-mep-identifier: $local-mep-identifier, remote-mep-identifier: $remote-mep-identifier, iterator-name: $iterator-name, mep-mac-address: $mep-mac-address history-record-number: $history-record-number mi-end-time: $mi-end-time ";
+                        }
+                    }
+                }
+                term is-avg-forward-delay-zero {
+                    when {
+                        equal-to "$forward-delay-avg" 0;
+                    }
+                    then {
+                        status {
+                            color yellow;
+                            message "WARNING: CFM average forward-delay $forward-delay-avg is zero for association-name: $association-name, domain-name: $domain-name, local-mep-identifier: $local-mep-identifier, remote-mep-identifier: $remote-mep-identifier, iterator-name: $iterator-name, mep-mac-address: $mep-mac-address history-record-number: $history-record-number mi-end-time: $mi-end-time ";
+                        }
+                    }
+                }
+
+                term is-forward-avg-delay-more-than-dt-threshhold {
+                    when {
+                        equal-to "$dt-forward-delay-avg" 1;
+                    }
+                    then {
+                        status {
+                            color yellow;
+                            message "WARNING: Anomaly detected - avg forward delay baseline is breached";
+                        }
+                    }
+                }
+                term is-forward-avg-delay-more-than-pt-threshold {
+                    when {
+                        greater-than-or-equal-to "$pt-forward-delay-avg" "$maximum-forward-delay-avg-threshold-value";
+                    }
+                    then {
+                        status {
+                            color yellow;
+                            message "WARNING: CFM predicted average forward-delay $pt-forward-delay-avg is more than the threshold ($maximum-forward-delay-avg-threshold-value) for association-name: $association-name, domain-name: $domain-name, local-mep-identifier: $local-mep-identifier, remote-mep-identifier: $remote-mep-identifier, iterator-name: $iterator-name, mep-mac-address: $mep-mac-address history-record-number: $history-record-number mi-end-time: $mi-end-time ";
+                        }
+                        next;
+                    }
+                }
+                /*
+                 * Defaults color to green.
+                 */
+                term is-avg-forward-delay-less-than-threshold {
+                    then {
+                        status {
+                            color green;
+                            message "CFM average forward-delay $forward-delay-avg is with in the threshold($maximum-forward-delay-avg-threshold-value) for association-name: $association-name, domain-name: $domain-name, local-mep-identifier: $local-mep-identifier, remote-mep-identifier: $remote-mep-identifier, iterator-name: $iterator-name, mep-mac-address: $mep-mac-address history-record-number: $history-record-number mi-end-time: $mi-end-time ";
+                        }
+                    }
+                }
+            }
+
+            trigger check-cfm-backward-avg-delay {
+                synopsis "CFM average backward-delay KPI";
+                description "Sets health based on CFM average backward-delay";
+                frequency 1offset;
+                /*
+                 * Sets color to red and sends out an anomaly notification when
+                 * average backward-delay is more than the threshold limit
+                 */
+                term is-avg-backward-delay-more-than-threshold {
+                    when {
+                        greater-than "$backward-delay-avg" "$maximum-backward-delay-avg-threshold-value";
+                    }
+                    then {
+                        status {
+                            color red;
+                            message "ERROR: CFM average backward-delay $backward-delay-avg is more than the threshold($maximum-backward-delay-avg-threshold-value) for association-name: $association-name, domain-name: $domain-name, local-mep-identifier: $local-mep-identifier, remote-mep-identifier: $remote-mep-identifier, iterator-name: $iterator-name, mep-mac-address: $mep-mac-address history-record-number: $history-record-number mi-end-time: $mi-end-time ";
+                        }
+                    }
+                }
+                term is-avg-backward-delay-zero {
+                    when {
+                        equal-to "$backward-delay-avg" 0;
+                    }
+                    then {
+                        status {
+                            color yellow;
+                            message "WARNING: CFM average backward-delay $backward-delay-avg is zero for association-name: $association-name, domain-name: $domain-name, local-mep-identifier: $local-mep-identifier, remote-mep-identifier: $remote-mep-identifier, iterator-name: $iterator-name, mep-mac-address: $mep-mac-address history-record-number: $history-record-number mi-end-time: $mi-end-time ";
+                        }
+                    }
+                }
+                term is-backward-avg-delay-more-than-dt-threshhold {
+                    when {
+                        equal-to "$dt-backward-delay-avg" 1;
+                    }
+                    then {
+                        status {
+                            color yellow;
+                            message "WARNING: Anomaly detected - backward avg delay baseline is breached";
+                        }
+                    }
+                }
+                term is-backward-avg-delay-more-than-pt-threshold {
+                    when {
+                        greater-than-or-equal-to "$pt-backward-delay-avg" "$maximum-backward-delay-avg-threshold-value";
+                    }
+                    then {
+                        status {
+                            color yellow;
+                            message "WARNING: CFM predicted average backward-delay $pt-backward-delay-avg is more than the threshold ($maximum-backward-delay-avg-threshold-value) for association-name: $association-name, domain-name: $domain-name, local-mep-identifier: $local-mep-identifier, remote-mep-identifier: $remote-mep-identifier, iterator-name: $iterator-name, mep-mac-address: $mep-mac-address history-record-number: $history-record-number mi-end-time: $mi-end-time ";
+                        }
+                        next;
+                    }
+                }
+                /*
+                 * Defaults color to green.
+                 */
+                term is-avg-backward-delay-less-than-threshold {
+                    then {
+                        status {
+                            color green;
+                            message "CFM average backward-delay $backward-delay-avg is with in the threshold($maximum-backward-delay-avg-threshold-value) for association-name: $association-name, domain-name: $domain-name, local-mep-identifier: $local-mep-identifier, remote-mep-identifier: $remote-mep-identifier, iterator-name: $iterator-name, mep-mac-address: $mep-mac-address history-record-number: $history-record-number mi-end-time: $mi-end-time ";
+                        }
+                    }
+                }
+            }
+
+            trigger check-cfm-mep-status-by-mac{
+                synopsis "CFM remote MEP stats";
+                description "Sets health based on CFM remote mac-address";
+                frequency 1offset;
+                /*
+                 * Sets color to red and sends out an anomaly notification when
+                 * mep-mac-address is not set
+                 */
+                term is-remote-mep-mac-addr-not-valid {
+                    when {
+                        matches-with  "$mep-mac-address" "$mac-value-when-missing";
+                    }
+                    then {
+                        status {
+                            color red;
+                            message "ERROR: CFM remote mac address $mep-mac-address is not valid ( mac-value-when-missing: $mac-value-when-missing)   for association-name: $association-name, domain-name: $domain-name, local-mep-identifier: $local-mep-identifier, remote-mep-identifier: $remote-mep-identifier, iterator-name: $iterator-name, mep-mac-address: $mep-mac-address history-record-number: $history-record-number mi-end-time: $mi-end-time ";
+                        }
+                    }
+                }
+                /*
+                 * Defaults color to green.
+                 */
+                term is-remote-mep-mac-addr-valid {
+                    then {
+                        status {
+                            color green;
+                            message "CFM remote mac address $mep-mac-address is valid  for association-name: $association-name, domain-name: $domain-name, local-mep-identifier: $local-mep-identifier, remote-mep-identifier: $remote-mep-identifier, iterator-name: $iterator-name, mep-mac-address: $mep-mac-address history-record-number: $history-record-number mi-end-time: $mi-end-time ";
+                        }
+                    }
+                }
+            }
+
+
+            /*
+            * Variables with default values. Default values can be changed
+            * while deploying playbook instance.
+            */
+            variable cfm-md-name {
+                value ".*";
+                description "Enter CFM maintenance-domain name in regex i.e. PCORE-PEPE, PCORE-PECE";
+                type string;
+            }
+            variable cfm-ma-name {
+                value ".*";
+                description "Enter CFM maintenance-association name in regex i.e. vpn-goose-0102";
+                type string;
+            }
+            variable cfm-local-mep {
+                value ".*";
+                description "Enter CFM local mep name in regex i.e. 101";
+                type string;
+            }
+            variable cfm-remote-mep {
+                value ".*";
+                description "Enter CFM remote mep name in regex, e.g. 102  ";
+                type string;
+            }
+            variable cfm-iterator-name {
+                value ".*";
+                description "Enter CFM iterator name in regex i.e. DM*, SLM*, DM1";
+                type string;
+            }
+
+	    /*
+            variable mac-value-when-missing {
+                value "00:00:00:00:00:00";
+                description "Default mac when missing";
+                type string;
+            }
+	    */
+            variable maximum-twoway-delay-avg-threshold {
+                value 100000;
+                description "Maximum twoway delay avg threshold value";
+                type int;
+            }
+            variable maximum-twoway-delay-max-threshold {
+                value 1000000;
+                description "Maximum twoway delay max threshold value";
+                type int;
+            }
+            variable maximum-twoway-delay-min-threshold {
+                value 1000000;
+                description "Maximum twoway delay min threshold value";
+                type int;
+            }
+
+            variable maximum-forward-delay-avg-threshold {
+                value 100000;
+                description "Maximum forward-delay avg threshold value";
+                type int;
+            }
+            variable maximum-backward-delay-avg-threshold {
+                value 100000;
+                description "Maximum backward-delay avg threshold value";
+                type int;
+            }
+
+            rule-properties {
+                version 1;
+                contributor juniper;
+                category basic;
+                supported-healthbot-version 4.0.0;
+                supported-devices {
+                    juniper {
+                        operating-system junos {
+                            products MX {
+                                platforms All {
+                                    releases 18.1R1 {
+                                        release-support min-supported-release;
+                                    }
+                                }							
+                            }
+                            products PTX {
+                                platforms All {
+                                    releases 11.4R1 {
+                                        release-support min-supported-release;
+                                    }
+                                }							
+                            }
+                            products QFX {
+                                platforms All {
+                                    releases 15.2R1 {
+                                        release-support min-supported-release;
+                                    }
+                                }							
+                            }
+                            products EX {
+                                platforms All {
+                                    releases 15.2R1 {
+                                        release-support min-supported-release;
+                                    }
+                                }							
+                            }
+                            products ACX {
+                                platforms All {
+                                    releases 15.2R1 {
+                                        release-support min-supported-release;
+                                    }
+                                }							
+                            }
+                            products SRX {
+                                platforms All {
+                                    releases 15.2R1 {
+                                        release-support min-supported-release;
+                                    }
+                                }							
+                            }
+                        }
+                    }
+                }
+                helper-files other {
+                    list-of-files cfm-dm.yml;
+                }				
+            }
+        }
+    }
+}

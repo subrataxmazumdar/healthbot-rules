@@ -1,0 +1,15 @@
+/*
+ * Monitors L2 circuit and VPLS connection status and notify anomalies.
+ *
+ * 1) Rule check-l2svc-l2ckt-conn-status, Monitors L2Circuit connction  status and notify anomalies
+ *
+ * 2) Rule check-l2svc-vpls-conn-status , Monitors VPLS service connction  status and notify anomalies
+ *
+ */
+healthbot {
+    playbook l2svc-l2ckt-vpls-playbook {
+        rules [ service.l2ckt-conn/check-l2svc-l2ckt-conn-status service.vpls-conn/check-l2svc-vpls-conn-status ];
+        description "Monitors L2 circuit and VPLS connection status.";
+        synopsis "Layer 2 VPN - circuits and vpls";
+    }
+}

@@ -1,0 +1,297 @@
+/*
+ * Monitors CFM interface status and notify anomalies related to link status and
+ * remote mep state and notifies anomalies  
+ * if link status and remote MEP state are not normal.
+ *
+ * Three inputs control CFM interface selection:
+ *   1) cfm-if-name, CFM interface name in regex " 
+ *   2) cfm-local-mep-id, CFM local mep name in regex 
+ *   1) cfm-remote-mep-id, FM remote mep name in regex
+ *
+ * Minimum sample configuration required in Junos MX configuration
+ * set interfaces ge-0/3/9 description "Connect to lab-asr9k10-02 gi0/0/1/19"
+ * set interfaces ge-0/3/9 unit 0 family inet address 10.3.19.1/30
+ * set protocols oam ethernet connectivity-fault-management performance-monitoring enhanced-sla-iterator
+ * set protocols oam ethernet connectivity-fault-management performance-monitoring measurement-interval 5
+ * set protocols oam ethernet connectivity-fault-management performance-monitoring sla-iterator-profiles PCORE measurement-type two-way-delay
+ * set protocols oam ethernet connectivity-fault-management performance-monitoring sla-iterator-profiles PCORE measurement-interval 5
+ * set protocols oam ethernet connectivity-fault-management maintenance-domain PCORE level 0
+ * set protocols oam ethernet connectivity-fault-management maintenance-domain PCORE maintenance-association PCORE continuity-check interval 100ms
+ * set protocols oam ethernet connectivity-fault-management maintenance-domain PCORE maintenance-association PCORE mep 100 interface ge-0/3/9
+ * set protocols oam ethernet connectivity-fault-management maintenance-domain PCORE maintenance-association PCORE mep 100 remote-mep 101 sla-iterator-profile PCORE
+ */
+healthbot {
+    topic protocol.cfm-if {
+        description "Monitors CFM interface status and notify anomalies";
+        synopsis "Show CFM interface status ";
+        rule cfm-interface-status-netconf {
+            description "Display CFM interface status and raise evnet if remote state is not ok";
+            synopsis "cfm interface info";		
+            /*
+             * Monitors CFM interface and link status.
+             * Notifies via the dashboard colors when link, interface and reote mep state is down.
+             *Otherwise the color is set to green.
+             *
+             * Use interface-name local-mep-identifier remote-mep-identifier as key for rule.
+             */
+            keys [ interface-name local-mep-identifier remote-mep-identifier ];
+
+            /*
+             * Sensor configuration to get data from network devices.
+             */
+            sensor cfm_iAgent {
+                iAgent {
+                    file cfm-if.yml;
+                    table CfmInterfaceTable;
+                    frequency 30s;
+                }
+            }
+            field interface-name {
+                sensor cfm_iAgent {
+		    /*
+		    */
+		    where "cfm-interface-name =~ /{{cfm-if-name}}/";
+                    path cfm-interface-name;
+                }
+                type string;
+                description "CFM interface name";
+            }
+            field local-mep-identifier {
+                sensor cfm_iAgent {
+		    /*
+		    */
+		    where "cfm-local-mep-identifier =~ /{{cfm-local-mep-id}}/";
+                    path cfm-local-mep-identifier;
+                }
+                type string;
+                description "CFM local mep identifier";
+            }
+            field remote-mep-identifier {
+                sensor cfm_iAgent {
+		    /*
+		    */
+		    where "cfm-remote-mep-identifier =~ /{{cfm-remote-mep-id}}/";
+                    path cfm-remote-mep-identifier;
+                }
+                type string;
+                description "CFM remote mep identifier";
+            }
+
+            field level {
+                sensor cfm_iAgent {
+                    path cfm-level;
+                }
+                type string;
+                description "CFM level";
+            }
+            field interface-status {
+                sensor cfm_iAgent {
+                    path cfm-interface-status;
+                }
+                type string;
+                description "CFM interface status";
+            }
+            field interface-link-status {
+                sensor cfm_iAgent {
+                    path cfm-interface-link-status;
+                }
+                type string;
+                description "CFM interface link status";
+            }
+            field remote-mep-state {
+                sensor cfm_iAgent {
+                    path cfm-remote-mep-state;
+                }
+                type string;
+                description "CFM remote MEP state";
+            }
+
+            trigger check-cfm-interface-state {
+                synopsis "CFM Interface Link and Status";
+                description "Sets health based on CFM Interface Link and Status ";
+                frequency 1offset;
+                /*
+                 * Sets color to red and sends out an anomaly notification when
+                 * average delay is more than the threshold limit
+                 */
+                term is-interface-link-down {
+                    when {
+			does-not-match-with "$interface-link-status" Up {
+                            ignore-case;
+			}
+                    }
+                    then {
+                        status {
+                            color red;
+                            message "ERROR: CFM link status down for interface-name: $interface-name, local-mep-identifier: $local-mep-identifier, remote-mep-identifier: $remote-mep-identifier, interface-status: $interface-status, interface-link-status: $interface-link-status, remote-mep-state: $remote-mep-state";
+                        }
+                    }
+                }
+                term is-interface-status-down {
+                    when {
+			does-not-match-with "$interface-status" Active {
+                            ignore-case;
+			}
+                    }
+                    then {
+                        status {
+                            color red;
+                            message "ERROR: CFM interface status down for interface-name: $interface-name, local-mep-identifier: $local-mep-identifier, remote-mep-identifier: $remote-mep-identifier, interface-status: $interface-status, interface-link-status: $interface-link-status, remote-mep-state: $remote-mep-state";
+                        }
+                    }
+                }
+
+                /*
+                 * Defaults color to green.
+                 */
+                term is-interface-status-up {
+                    then {
+                        status {
+                            color green;
+                            message "CFM interface status is Active for interface-name: $interface-name, local-mep-identifier: $local-mep-identifier, remote-mep-identifier: $remote-mep-identifier, interface-status: $interface-status, interface-link-status: $interface-link-status, remote-mep-state: $remote-mep-state";
+                        }
+                    }
+                }
+            }
+            trigger check-cfm-remote-mep-state {
+                synopsis "CFM Remote State";
+                description "Sets health based on CFM remote MEP state";
+                frequency 1offset;
+
+                /*
+                 * Sets color to red and sends out an anomaly notification when
+                 * interface status is Failed
+                 */
+                term is-interface-remote-mep-state-is-Failed {
+                    when {
+			matches-with "$remote-mep-state" Failed {
+                            ignore-case;
+			}
+                    }
+                    then {
+                        status {
+                            color red;
+                            message "ERROR: CFM remote MEP state is not OK for interface-name: $interface-name, local-mep-identifier: $local-mep-identifier, remote-mep-identifier: $remote-mep-identifier, interface-status: $interface-status, interface-link-status: $interface-link-status, remote-mep-state: $remote-mep-state";
+                        }
+                    }
+		}
+                /*
+                 * Sets color to yellow when
+                 * average delay is more than the threshold limit
+                 * interface status is anything other than Failed and Ok
+                 */
+                term is-interface-remote-mep-state-not-ok {
+                    when {
+			does-not-match-with "$remote-mep-state" Ok {
+                            ignore-case;
+			}
+                    }
+                    then {
+                        status {
+                            color yellow;
+                            message "WARNING: CFM remote MEP state is not OK for interface-name: $interface-name, local-mep-identifier: $local-mep-identifier, remote-mep-identifier: $remote-mep-identifier, interface-status: $interface-status, interface-link-status: $interface-link-status, remote-mep-state: $remote-mep-state";
+                        }
+                    }
+                }
+
+                /*
+                 * Defaults color to green.
+                 */
+                term is-interface-remote-mep-state-is-ok {
+                    then {
+                        status {
+                            color green;
+                            message "CFM Remote MEP state is OK for interface-name: $interface-name, local-mep-identifier: $local-mep-identifier, remote-mep-identifier: $remote-mep-identifier, interface-status: $interface-status, interface-link-status: $interface-link-status, remote-mep-state: $remote-mep-state";
+                        }
+                    }
+                }
+            }
+
+
+            /*
+            * Variables with default values. Default values can be changed
+            * while deploying playbook instance.
+            */
+            variable cfm-if-name {
+                value ".*";
+                description "Enter CFM interface name in regex i.e. ge-0/0/.*" ;
+                type string;
+            }
+            variable cfm-local-mep-id {
+		/*
+                value "[0-9]*";
+		*/
+                value ".*";
+                description "Enter CFM local mep name in regex i.e. 101";
+                type string;
+            }
+            variable cfm-remote-mep-id {
+		/*
+                value "[0-9]*";
+		*/
+                value ".*";
+                description "Enter CFM remote mep name in regex, e.g. 102  ";
+                type string;
+            }
+
+
+            rule-properties {
+                version 1;
+                contributor juniper;
+                category basic;
+                supported-healthbot-version 4.0.0;
+                supported-devices {
+                    juniper {
+                        operating-system junos {
+                            products MX {
+                                platforms All {
+                                    releases 18.1R1 {
+                                        release-support min-supported-release;
+                                    }
+                                }							
+                            }
+                            products PTX {
+                                platforms All {
+                                    releases 11.4R1 {
+                                        release-support min-supported-release;
+                                    }
+                                }							
+                            }
+                            products QFX {
+                                platforms All {
+                                    releases 15.2R1 {
+                                        release-support min-supported-release;
+                                    }
+                                }							
+                            }
+                            products EX {
+                                platforms All {
+                                    releases 15.2R1 {
+                                        release-support min-supported-release;
+                                    }
+                                }							
+                            }
+                            products ACX {
+                                platforms All {
+                                    releases 15.2R1 {
+                                        release-support min-supported-release;
+                                    }
+                                }							
+                            }
+                            products SRX {
+                                platforms All {
+                                    releases 15.2R1 {
+                                        release-support min-supported-release;
+                                    }
+                                }							
+                            }
+                        }
+                    }
+                }
+                helper-files other {
+                    list-of-files cfm-if.yml;
+                }				
+            }
+        }
+    }
+}

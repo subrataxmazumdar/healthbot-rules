@@ -1,0 +1,16 @@
+/*
+ * Playbook monitor CFM average, min and max twoway delay statistics and
+ * average forward and backward delay statistics  using two-way-delay
+ * iterator profile and notify in  case delay is more than static threshold limit
+ * 
+ * 1) Rule check-cfm-dm-statistics-netconf, monitor average, min, max twoway delay
+ *    and avergae forward and backward delay and notifies 
+ *    anomalies when delay exceeds static thresholds.
+ */
+healthbot {
+    playbook cfm-dm-statistics-playbook {
+        rules protocol.cfm-dm/check-cfm-dm-statistics-netconf;
+        description "Device playbook to monitor CFM twoway, forward and backward delay ";
+		synopsis "Customized CFM twoway, forward and backward delay statistics checker";
+    }
+}

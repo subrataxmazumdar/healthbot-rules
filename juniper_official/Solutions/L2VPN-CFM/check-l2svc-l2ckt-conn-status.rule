@@ -1,0 +1,231 @@
+/*
+ *
+ * Monitors L2Circuit connection status and notify anomalies
+ *
+ */
+healthbot {
+    topic service.l2ckt-conn {
+        description "Monitors L2Circuit connection status and notify anomalies";
+        synopsis "Show L2Circuit connection status ";
+
+        rule check-l2svc-l2ckt-conn-status {
+            /*
+             * Monitors L2Circuit connection interface status.
+             * Notifies via the dashboard colors when connection state is down.
+             * Otherwise the color is set to green.
+             *
+             * Use neighbor-address interface-name as key for rule.
+             */
+            keys [ neighbor-address interface-name ];
+
+            /*
+             * Sensor configuration to get data from network devices.
+             */
+            sensor l2ckt-sensor {
+                iAgent {
+                    file l2svc-conn-status.yml;
+                    table l2CircuitNeighborConnTable;
+                    frequency 60s;
+                }
+            }
+
+            field neighbor-address {
+                sensor l2ckt-sensor {
+		    where "neighbor-address =~ /{{l2ckt-neighbor-address}}/";
+                    path neighbor-address;
+                }
+                type string;
+            }
+            field interface-name {
+                sensor l2ckt-sensor {
+		    /*
+		    */
+		    where "interface-name =~ /{{l2ckt-conn-interface-name}}/";
+                    path interface-name;
+                }
+                type string;
+            }
+
+            field connection-id {
+                sensor l2ckt-sensor {
+                    path connection-id;
+                }
+                type string;
+            }
+            field connection-status {
+                sensor l2ckt-sensor {
+                    path connection-status;
+                }
+                type string;
+            }
+            field connection-type {
+                sensor l2ckt-sensor {
+                    path connection-type;
+                }
+                type string;
+            }
+            field last-change {
+                sensor l2ckt-sensor {
+                    path last-change;
+                }
+                type string;
+            }
+
+            field interface-status {
+                sensor l2ckt-sensor {
+                    path interface-status;
+                }
+                type string;
+            }
+
+            trigger l2ckt-conn-status {
+                frequency 1.5offset;
+                term up-ckt-status {
+                    when {
+                        matches-with "$connection-status" Up {
+                            ignore-case;
+                        }
+                    }
+                    then {
+                        status {
+                            color green;
+                            message "Circuit Up, Neighbor Address = $neighbor-address , Interface Name = $interface-name ,  Last Change = $last-change , Circuit Status = $connection-status";
+                        }
+                    }
+                }
+                term down-ckt-status {
+                    when {
+                        matches-with "$connection-status" Dn {
+                            ignore-case;
+                        }
+                    }
+                    then {
+                        status {
+                            color red;
+                            message "Circuit Down, Neighbor Address = $neighbor-address , Interface Name = $interface-name , Last Change = $last-change , Circuit Status = $connection-status";
+                        }
+                    }
+                }
+                term other-ckt-status {
+                    then {
+                        status {
+                            color yellow;
+                            message "Circuit Status = $connection-status , Neighbor Address = $neighbor-address , Interface Name = $interface-name , Last Change = $last-change";
+                        }
+                    }
+                }
+            }
+            trigger l2ckt-conn-if-status {
+                frequency 1.5offset;
+                term up-ckt-if-status {
+                    when {
+                        matches-with "$interface-status" Up {
+                            ignore-case;
+                        }
+                    }
+                    then {
+                        status {
+                            color green;
+                            message "Connection Conn Interface  Up, Neighbor Address = $neighbor-address , Interface Name = $interface-name ,  Last Change = $last-change , Circuit Status = $connection-status";
+                        }
+                    }
+                }
+                term down-ckt-if-status {
+                    when {
+                        matches-with "$interface-status" Dn {
+                            ignore-case;
+                        }
+                    }
+                    then {
+                        status {
+                            color red;
+                            message "Circuit Conn Interface Down, Neighbor Address = $neighbor-address , Interface Name = $interface-name , Last Change = $last-change , Circuit Status = $connection-status";
+                        }
+                    }
+                }
+                term other-ckt-if-status {
+                    then {
+                        status {
+                            color yellow;
+                            message "Circuit Conn Interface Status = $interface-status , Neighbor Address = $neighbor-address , Interface Name = $interface-name , Last Change = $last-change , Circuit Status = $connection-status";
+                        }
+                    }
+                }
+            }
+
+            /*
+            * Variables with default values. Default values can be changed
+            * while deploying playbook instance.
+            */
+            variable l2ckt-neighbor-address {
+                value ".*";
+                description "Enter L2Circuit neighbor-address i.e. ge-0/0/.*" ;
+                type string;
+            }
+            variable l2ckt-conn-interface-name {
+                value ".*";
+                description "Enter L2Circuit connction interface name in regex i.e. ge-0/0/.*" ;
+                type string;
+            }
+
+            rule-properties {
+                version 1;
+                contributor juniper;
+                category basic;
+                supported-healthbot-version 4.0.0;
+                supported-devices {
+                    juniper {
+                        operating-system junos {
+                            products MX {
+                                platforms All {
+                                    releases 18.1R1 {
+                                        release-support min-supported-release;
+                                    }
+                                }							
+                            }
+                            products PTX {
+                                platforms All {
+                                    releases 11.4R1 {
+                                        release-support min-supported-release;
+                                    }
+                                }							
+                            }
+                            products QFX {
+                                platforms All {
+                                    releases 15.2R1 {
+                                        release-support min-supported-release;
+                                    }
+                                }							
+                            }
+                            products EX {
+                                platforms All {
+                                    releases 15.2R1 {
+                                        release-support min-supported-release;
+                                    }
+                                }							
+                            }
+                            products ACX {
+                                platforms All {
+                                    releases 15.2R1 {
+                                        release-support min-supported-release;
+                                    }
+                                }							
+                            }
+                            products SRX {
+                                platforms All {
+                                    releases 15.2R1 {
+                                        release-support min-supported-release;
+                                    }
+                                }							
+                            }
+                        }
+                    }
+                }
+                helper-files other {
+                    list-of-files l2svc-conn-status.yml;
+                }				
+            }
+
+        }
+    }
+}

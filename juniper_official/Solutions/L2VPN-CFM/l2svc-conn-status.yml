@@ -1,0 +1,70 @@
+---
+l2CircuitNeighborConnTable:
+    rpc: get-l2ckt-connection-information
+    args:
+        status: True
+    item: l2circuit-neighbor/connection
+    key: 
+      - ./preceding-sibling::neighbor-address[1]
+      - local-interface[1]/interface-name
+    view: l2CircuitNeighborConnView
+l2CircuitNeighborConnView:
+    fields:
+        neighbor-address: ./preceding-sibling::neighbor-address[1]
+        connection-id: connection-id
+        connection-type: connection-type
+        connection-status: connection-status
+        last-change: last-change
+        # 
+        interface-name: local-interface[1]/interface-name
+        interface-status: local-interface[1]/interface-status
+        interface-encapsulation: local-interface[1]/interface-encapsulation
+
+vplsInstanceConnTable:
+    rpc: get-vpls-connection-information
+    args:
+        status: True
+    item: //connection
+    key: 
+        - ../preceding-sibling::instance-name[1]
+        - ./preceding-sibling::local-site-id[1]
+        - remote-pe
+    view: vplsInstanceConnView
+vplsInstanceConnView:
+    fields:
+        instance-name: ../preceding-sibling::instance-name[1]
+        local-site-id: ./preceding-sibling::local-site-id[1]
+        connection-id: connection-id
+        connection-type: connection-type
+        connection-status: connection-status
+        remote-pe: remote-pe
+        last-change: last-change
+        #
+        interface-name: local-interface[1]/interface-name
+        interface-status: local-interface[1]/interface-status
+        interface-encapsulation: local-interface[1]/interface-encapsulation
+
+l2vpnInstanceConnTable:
+    rpc: get-l2vpn-connection-information
+    args:
+        status: True
+    item: //connection
+    key: 
+        - ../preceding-sibling::instance-name[1]
+        - ./preceding-sibling::local-site-id[1]
+        - remote-pe
+    view: l2vpnInstanceConnView
+l2vpnInstanceConnView:
+    fields:
+        instance-name: ../preceding-sibling::instance-name[1]
+        local-site-id: ./preceding-sibling::local-site-id[1]
+        connection-id: connection-id
+        connection-type: connection-type
+        connection-status: connection-status
+        remote-pe: remote-pe
+        last-change: last-change
+        #
+        interface-name: local-interface[1]/interface-name
+        interface-status: local-interface[1]/interface-status
+        interface-encapsulation: local-interface[1]/interface-encapsulation
+

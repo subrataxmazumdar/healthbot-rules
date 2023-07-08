@@ -1,0 +1,229 @@
+/*
+ *
+ * Monitors VPLS service connection status and notify anomalies
+ *
+ */
+healthbot {
+    topic service.vpls-conn {
+        rule check-l2svc-vpls-conn-status {
+            keys [ instance-name local-site-id remote-pe ];
+            synopsis "Layer 2 services";
+            description "Collects Layer 2 vpls connection status";
+            sensor vpls-status-sensor {
+                iAgent {
+                    file l2svc-conn-status.yml;
+                    table vplsInstanceConnTable;
+                    frequency 60s;
+                }
+            }
+            field instance-name {
+                sensor vpls-status-sensor {
+		    where "instance-name =~ /{{vpls-instance-name}}/";
+                    path instance-name;
+                }
+                type string;
+            }
+
+            field connection-id {
+                sensor vpls-status-sensor {
+                    path connection-id;
+                }
+                type string;
+            }
+            field connection-status {
+                sensor vpls-status-sensor {
+                    path connection-status;
+                }
+                type string;
+            }
+            field connection-type {
+                sensor vpls-status-sensor {
+                    path connection-type;
+                }
+                type string;
+            }
+            field last-change {
+                sensor vpls-status-sensor {
+                    path last-change;
+                }
+                type string;
+            }
+            field local-site-id {
+                sensor vpls-status-sensor {
+                    path local-site-id;
+                }
+                type string;
+            }
+            field remote-pe {
+                sensor vpls-status-sensor {
+                    path remote-pe;
+                }
+                type string;
+            }
+
+            field interface-name {
+                sensor vpls-status-sensor {
+		    where "interface-name =~ /{{vpls-conn-interface-name}}/";
+                    path interface-name;
+                }
+                type string;
+            }
+            field interface-status {
+                sensor vpls-status-sensor {
+                    path interface-status;
+                }
+                type string;
+            }
+
+            trigger vpls-conn-status {
+                frequency 1.5offset;
+                term up-conn-status {
+                    when {
+                        matches-with "$connection-status" Up {
+                            ignore-case;
+                        }
+                    }
+                    then {
+                        status {
+                            color green;
+                            message "VPLS Up, Remote PE = $remote-pe , Instance Name = $instance-name , Last Change = $last-change , VPLS Status = $connection-status";
+                        }
+                    }
+                }
+                term down-conn-status {
+                    when {
+                        matches-with "$connection-status" Dn {
+                            ignore-case;
+                        }
+                    }
+                    then {
+                        status {
+                            color red;
+                            message "VPLS Down, Remote PE = $remote-pe , Instance Name = $instance-name , Last Change = $last-change , VPLS Status = $connection-status";
+                        }
+                    }
+                }
+                term other-conn-status {
+                    then {
+                        status {
+                            color yellow;
+                            message "Remote PE = $remote-pe , Instance Name = $instance-name , Last Change = $last-change , VPLS Status = $connection-status";
+                        }
+                    }
+                }
+            }
+
+            trigger vpls-conn-if-status {
+                frequency 1.5offset;
+                term up-conn-if-status {
+                    when {
+                        matches-with "$interface-status" Up {
+                            ignore-case;
+                        }
+                    }
+                    then {
+                        status {
+                            color green;
+                            message "VPLS interface Up, Remote PE = $remote-pe , Instance Name = $instance-name , Last Change = $last-change , VPLS Status = $connection-status";
+                        }
+                    }
+                }
+                term down-conn-if-status {
+                    when {
+                        matches-with "$interface-status" Dn {
+                            ignore-case;
+                        }
+                    }
+                    then {
+                        status {
+                            color red;
+                            message "VPLS connction interface Down, Remote PE = $remote-pe , Instance Name = $instance-name , Last Change = $last-change , VPLS Status = $connection-status";
+                        }
+                    }
+                }
+                term other-conn-if-status {
+                    then {
+                        status {
+                            color yellow;
+                            message "PLS connction  interface status = $interface-status, Remote PE = $remote-pe , Instance Name = $instance-name , Last Change = $last-change , VPLS Status = $connection-status";
+                        }
+                    }
+                }
+            }
+            /*
+            * Variables with default values. Default values can be changed
+            * while deploying playbook instance.
+            */
+            variable vpls-instance-name {
+                value ".*";
+                description "Enter VPLS instance-name i.e. VPN-vplsx-0102|101" ;
+                type string;
+            }
+            variable vpls-conn-interface-name {
+                value ".*";
+                description "Enter VPLS connction interface name in regex i.e. ge-0/0/.*" ;
+                type string;
+            }
+
+            rule-properties {
+                version 1;
+                contributor juniper;
+                category basic;
+                supported-healthbot-version 4.0.0;
+                supported-devices {
+                    juniper {
+                        operating-system junos {
+                            products MX {
+                                platforms All {
+                                    releases 18.1R1 {
+                                        release-support min-supported-release;
+                                    }
+                                }							
+                            }
+                            products PTX {
+                                platforms All {
+                                    releases 11.4R1 {
+                                        release-support min-supported-release;
+                                    }
+                                }							
+                            }
+                            products QFX {
+                                platforms All {
+                                    releases 15.2R1 {
+                                        release-support min-supported-release;
+                                    }
+                                }							
+                            }
+                            products EX {
+                                platforms All {
+                                    releases 15.2R1 {
+                                        release-support min-supported-release;
+                                    }
+                                }							
+                            }
+                            products ACX {
+                                platforms All {
+                                    releases 15.2R1 {
+                                        release-support min-supported-release;
+                                    }
+                                }							
+                            }
+                            products SRX {
+                                platforms All {
+                                    releases 15.2R1 {
+                                        release-support min-supported-release;
+                                    }
+                                }							
+                            }
+                        }
+                    }
+                }
+                helper-files other {
+                    list-of-files l2svc-conn-status.yml;
+                }				
+            }
+
+
+        }
+    }
+}

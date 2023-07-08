@@ -1,0 +1,36 @@
+---
+CfmSlmTable:
+  rpc: get-cfm-iterator-history
+  item: cfm-iter-mep-summary
+  args:
+    sla-iterator: SLM1
+    loss-measurement: True
+  key:
+    - cfm-maintenance-domain-name
+    - cfm-maintenance-association-name
+    - cfm-local-mep-identifier
+    - cfm-remote-mep-identifier
+    - ./following-sibling::cfm-iter-summary[1]/cfm-iterator-name
+  view: CfmSlmTableView
+
+CfmSlmTableView:
+  fields:
+    cfm-remote-mep-mac-address:         ./cfm-remote-mep-mac-address
+    cfm-iterator-name:                  ./following-sibling::cfm-iter-summary[1]/cfm-iterator-name
+
+    cfm-pm-history-record-number:       (./following-sibling::cfm-iter-mep-summary[1]/preceding-sibling::cfm-iter-pm-history-lm-entry[1]/cfm-pm-history-record-number       | ./following-sibling::cfm-iter-pm-history-lm-entry[last()]/cfm-pm-history-record-number)[1]
+    cfm-pm-mi-start-time:               (./following-sibling::cfm-iter-mep-summary[1]/preceding-sibling::cfm-iter-pm-history-lm-entry[1]/cfm-pm-mi-start-time               | ./following-sibling::cfm-iter-pm-history-lm-entry[last()]/cfm-pm-mi-start-time)[1]
+    cfm-pm-mi-end-time:                 (./following-sibling::cfm-iter-mep-summary[1]/preceding-sibling::cfm-iter-pm-history-lm-entry[1]/cfm-pm-mi-end-time                 | ./following-sibling::cfm-iter-pm-history-lm-entry[last()]/cfm-pm-mi-end-time)[1]
+
+    cfm-pm-backward-frame-loss:         (./following-sibling::cfm-iter-mep-summary[1]/preceding-sibling::cfm-iter-pm-history-lm-entry[1]/cfm-pm-backward-frame-loss         | ./following-sibling::cfm-iter-pm-history-lm-entry[last()]/cfm-pm-backward-frame-loss)[1]
+    cfm-pm-forward-frame-loss:          (./following-sibling::cfm-iter-mep-summary[1]/preceding-sibling::cfm-iter-pm-history-lm-entry[1]/cfm-pm-forward-frame-loss          | ./following-sibling::cfm-iter-pm-history-lm-entry[last()]/cfm-pm-forward-frame-loss)[1]
+
+    cfm-pm-forward-min-flr-percentage:  (./following-sibling::cfm-iter-mep-summary[1]/preceding-sibling::cfm-iter-pm-history-lm-entry[1]/cfm-pm-forward-min-flr-percentage  | ./following-sibling::cfm-iter-pm-history-lm-entry[last()]/cfm-pm-forward-min-flr-percentage)[1]
+    cfm-pm-forward-max-flr-percentage:  (./following-sibling::cfm-iter-mep-summary[1]/preceding-sibling::cfm-iter-pm-history-lm-entry[1]/cfm-pm-forward-max-flr-percentage  | ./following-sibling::cfm-iter-pm-history-lm-entry[last()]/cfm-pm-forward-max-flr-percentage)[1]
+    cfm-pm-forward-avg-flr-percentage:  (./following-sibling::cfm-iter-mep-summary[1]/preceding-sibling::cfm-iter-pm-history-lm-entry[1]/cfm-pm-forward-avg-flr-percentage  | ./following-sibling::cfm-iter-pm-history-lm-entry[last()]/cfm-pm-forward-avg-flr-percentage)[1]
+
+    cfm-pm-backward-min-flr-percentage: (./following-sibling::cfm-iter-mep-summary[1]/preceding-sibling::cfm-iter-pm-history-lm-entry[1]/cfm-pm-backward-min-flr-percentage | ./following-sibling::cfm-iter-pm-history-lm-entry[last()]/cfm-pm-backward-min-flr-percentage)[1]
+    cfm-pm-backward-max-flr-percentage: (./following-sibling::cfm-iter-mep-summary[1]/preceding-sibling::cfm-iter-pm-history-lm-entry[1]/cfm-pm-backward-max-flr-percentage | ./following-sibling::cfm-iter-pm-history-lm-entry[last()]/cfm-pm-backward-max-flr-percentage)[1]
+    cfm-pm-backward-avg-flr-percentage: (./following-sibling::cfm-iter-mep-summary[1]/preceding-sibling::cfm-iter-pm-history-lm-entry[1]/cfm-pm-backward-avg-flr-percentage | ./following-sibling::cfm-iter-pm-history-lm-entry[last()]/cfm-pm-backward-avg-flr-percentage)[1]
+
+

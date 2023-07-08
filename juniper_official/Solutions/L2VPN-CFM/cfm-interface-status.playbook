@@ -1,0 +1,13 @@
+/*
+ * Playbook to monitor CFM interface, link and remote MEP status
+ * 
+ * 1) Rule cfm-interface-status-netconf, monitor CFM interface link, status, remote mep state and notify
+ *    anomalies when status' are not nromal.
+ */
+healthbot {
+    playbook cfm-interface-status-playbook {
+        rules protocol.cfm-if/cfm-interface-status-netconf;
+        description "Device playbook to monitor CFM interface, link and remote MEP status";
+		synopsis "Customized CFM interface, link and remote MEP status";
+    }
+}
