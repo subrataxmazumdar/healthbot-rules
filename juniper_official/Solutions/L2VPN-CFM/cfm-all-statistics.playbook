@@ -19,7 +19,7 @@ healthbot {
     playbook cfm-all-statistics-playbook {
         rules [ protocol.cfm-dm/check-cfm-dm-statistics-netconf protocol.cfm-slm/check-cfm-slm-statistics-netconf protocol.cfm-if/cfm-interface-status-netconf ];
 
-        description "Device playbook to monitor CFM interface status, delay and synthetic loss for COX POC";
-	synopsis "Customized CFM interface status, delay and loss statistics checker for COX POC";
+        description "All-in-one Device playbook to monitor CFM related KPIs: interface status, avg, min, annd max delay and synthetic loss.";
+	synopsis "Customized CFM interface status, delay and loss statistics checker.";
     }
 }

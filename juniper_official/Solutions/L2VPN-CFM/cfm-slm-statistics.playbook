@@ -1,6 +1,6 @@
 /*
  * Playbook monitor CFM forward and backward frame loss statistics based on slm iterator profile and notify in
- * case delay is more than static threshold limit
+ * case frame loss is more than static threshold limit
  * 
  * 1) Rule check-cfm-slm-statistics-netconf, monitor forward and backward frame loss using slm iterator profile and notifies
  *    anomalies when frame loss  exceeds static thresholds.
